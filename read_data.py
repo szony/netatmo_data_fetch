@@ -58,11 +58,13 @@ def get_netatmo_data(access_token, device_id):
 
 def process_sensor_data(data):
     """
-    Processes the sensor data, prints readings for each sensor, and
+    Processes the sensor data from the Netatmo API and
     creates a JSON object grouped by sensor, excluding trends and min/max values.
 
     Args:
         data (dict): The JSON data from the Netatmo API.
+    Returns:
+        dict: The sensor data grouped by sensor, or None if an error occurred.
     """
     sensor_data = {}
     excluded_keys = ["min_temp", "max_temp", "date_min_temp", "date_max_temp", "temp_trend", "pressure_trend"]
@@ -76,10 +78,8 @@ def process_sensor_data(data):
 
             # Process main device data
             if "dashboard_data" in device:
-                print(f"\nSensor: {device_name} (ID: {device_id})")
                 for key, value in device["dashboard_data"].items():
                     if key != "time_utc" and key not in excluded_keys:
-                        print(f"  {key}: {value}")
                         sensor_data[device_id]["readings"][key] = value
 
             # Process module data
@@ -90,20 +90,32 @@ def process_sensor_data(data):
                     sensor_data[module_id] = {"name": module_name, "readings": {}}
 
                     if "dashboard_data" in module:
-                        print(f"\nSensor: {module_name} (ID: {module_id})")
                         for key, value in module["dashboard_data"].items():
                             if key != "time_utc" and key not in excluded_keys:
-                                print(f"  {key}: {value}")
                                 sensor_data[module_id]["readings"][key] = value
 
     else:
         print("Invalid data format or no devices found.")
+        return None 
 
     return sensor_data
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Main function to fetch and process sensor data.
+    Returns the grouped sensor data.
+    """
     AccessToken, DeviceID = read_secrets()
     sensor_data = get_netatmo_data(AccessToken, DeviceID)
     if sensor_data:
         data_grouped_by_sensor = process_sensor_data(sensor_data)
+        return data_grouped_by_sensor
+    return None
+
+
+if __name__ == "__main__":
+    grouped_data = main()
+    if grouped_data:
+        print("\n--- Grouped Sensor Data (JSON) ---")
+        print(json.dumps(grouped_data, indent=2))
